@@ -1,10 +1,22 @@
-const Discord=require("discord.js")
+const Discord=require("discord.js");
+const axios = require('axios');
+//const fetch = require('node-fetch');
+const fs=require('fs');
 const { Client, Intents, MessageActionRow, MessageButton} = require('discord.js');
-const intents = ["GUILDS", "GUILD_MEMBERS",Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES];
-const client = new Client({intents: intents, ws:{intents: intents}});
+const intents = ["GUILDS", "GUILD_MEMBERS",Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS,Intents.FLAGS.GUILDS,Intents.FLAGS.DIRECT_MESSAGE_REACTIONS];
+const client = new Client({intents: intents, ws:{intents: intents}, partials: ["MESSAGE", "CHANNEL", "REACTION"]});
 const welcome=require('./welcome.js')
 //require("discord-buttons")(client)
 const PREFIX = "$"
+
+client.commands = new Discord.Collection();
+
+const commandFiles= fs.readdirSync('./commands/').filter(file => file.endsWith('.js'));
+
+for(const file of commandFiles){
+  const command=require(`./commands/${file}`);
+  client.commands.set(command.name,command);
+}
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -20,21 +32,19 @@ client.on("guildMemberAdd",guildMember => {
 
 
 client.on("messageCreate", (msg) => {
-  let isBotMentioned = msg.content.toLowerCase().includes('@RoleBot#8634') || msg.content.toLowerCase().includes('@RoleBot');
-  console.log(isBotMentioned);
-
+ 
   if(msg.content.startsWith(PREFIX)){
     const [CMD_NAME, ...args] = msg.content
       .trim()
       .substring(PREFIX)
       .split(/\s+/);
-
-    if(CMD_NAME.tolowercase() === "button"){
-      
+    let command=CMD_NAME.toLowerCase().substring(1);
+    if(command === "reactionrole"){
+      client.commands.get('reactionRole').execute(msg,args,Discord,client,axios);      
     }
   }
   
-  if(msg.content === "Hi") {
+  if(msg.content.toLowerCase() === "hi" || msg.content.toLowerCase() === "hello") {
      msg.reply(`Hi, @${msg.member.user.tag}\n ${msg.member.id}`);
    }
 
@@ -47,7 +57,7 @@ client.on("messageCreate", (msg) => {
       
   }
 
-  if(isBotMentioned && (msg.content.indexOf("metamask") != -1 || msg.content.indexOf("Metamask") != -1)) {
+  if(msg.content.indexOf("metamask") != -1 || msg.content.indexOf("Metamask") != -1) {
      msg.reply(`Signup to Metamask ${process.env.metamask}`)
    }
 
@@ -63,7 +73,7 @@ client.on("messageCreate", (msg) => {
           "style": 5,
           "label": `Verify Me`,
           "disabled": false,
-          "url":'http://github.com',
+          "url":`http://9f27-2405-201-4018-6130-f5c4-88b5-9ef1-f2ed.ngrok.io/${msg.guild.id}/${msg.member.id}`,
           "type": 2
         },
         {
